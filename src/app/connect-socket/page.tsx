@@ -1,6 +1,6 @@
 "use client";
 
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -10,10 +10,19 @@ interface Coords {
   long: number;
 }
 
+let socket: Socket | null = null;
+
+export const getSocket = () => {
+  if (!socket) {
+    socket = io("http://localhost:8000");
+  }
+
+  return socket;
+};
+
 const Page = () => {
   const [userCoords, setUserCoords] = useState<Coords>();
-
-  const socket = useMemo(() => io("http://localhost:8000"), []);
+  const socket = useMemo(() => getSocket(), []);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
@@ -54,12 +63,18 @@ const Page = () => {
       console.log("User is connected");
     });
 
-    socket.on("coords", (coords) => {
-      console.log("Received coords: ", coords);
-      addMarker(coords.coords);
+    socket.on("coords", (data) => {
+      console.log("Received coords: ", data.coords);
+      addMarker(data.coords, data.id);
+    });
+
+    socket.on("live-users", (users) => {
+      console.log("Live users: ", users);
     });
 
     return () => {
+      socket.off("coords"); // Remove listeners to prevent memory leaks
+      socket.off("live-users");
       socket.disconnect();
     };
   }, [socket]);
@@ -70,19 +85,18 @@ const Page = () => {
     }
   }, [userCoords, socket]);
 
-  const addMarker = (coords: Coords) => {
+  const addMarker = (coords: Coords, id: string) => {
     if (markersLayerRef.current) {
       const customIcon = L.icon({
-        iconUrl:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLWRQ2MP28ucwL3bUexiJ8kfDjKM_IO6TCrw&s",
+        iconUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLWRQ2MP28ucwL3bUexiJ8kfDjKM_IO6TCrw&s",
         iconSize: [40, 40],
         iconAnchor: [20, 40],
         popupAnchor: [0, -40],
       });
 
-      const marker = L.marker([coords.lat, coords.long], { icon: customIcon }).bindPopup(
-        "You are here"
-      );
+      const marker = L.marker([coords.lat, coords.long], {
+        icon: customIcon,
+      }).bindPopup(`User ${id}`);
       markersLayerRef.current.addLayer(marker);
     }
   };

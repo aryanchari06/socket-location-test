@@ -17,11 +17,20 @@ server.listen(8000, () => {
 
 io.on("connection", (socket) => {
   console.log("New socket connection: ", socket.id);
-  // io.emit("message", "Hello user")
+
+  // Emit current list of users to the newly connected client
+  io.emit("live-users", [...io.sockets.sockets.keys()]);
+
+  // Listen for user coordinates and broadcast to other users
   socket.on("user-coords", (coords) => {
-    coords.lat = coords.lat + Math.random()*0.0009
-    coords.long = coords.long + Math.random()*0.0009
-    console.log(coords)
-    io.emit("coords", {coords, id:socket.id});
+    coords.lat = coords.lat + Math.random() * 0.0009; // Add random offset for demo
+    coords.long = coords.long + Math.random() * 0.0009;
+    console.log(`User ${socket.id} coords: `, coords);
+    io.emit("coords", { coords, id: socket.id }); // Broadcast to all users
+  });
+
+  // Clean up when a user disconnects
+  socket.on("disconnect", () => {
+    console.log(`User ${socket.id} disconnected`);
   });
 });
