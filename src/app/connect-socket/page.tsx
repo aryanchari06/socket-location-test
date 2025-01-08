@@ -9,7 +9,7 @@ interface Coords {
   lat: number;
   long: number;
 }
-const page = () => {
+const Page = () => {
   const [userCoords, setUserCoords] = useState<Coords>();
 
   const socket = useMemo(() => io("http://localhost:8000"), []);
@@ -114,4 +114,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;
