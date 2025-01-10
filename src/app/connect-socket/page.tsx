@@ -16,97 +16,120 @@ export const getSocket = () => {
   if (!socket) {
     socket = io("http://localhost:8000");
   }
-
   return socket;
 };
 
 const Page = () => {
-  const [userCoords, setUserCoords] = useState<Coords>();
+  const [userCoords, setUserCoords] = useState<Coords | null>(null);
+  const [status, setStatus] = useState<string>("Initializing...");
   const socket = useMemo(() => getSocket(), []);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const markers = useRef<Map<string, L.Marker>>(new Map()); // Track markers by ID
 
-  // Initialize the map only on the client side
+  // initializing map
   useEffect(() => {
-    if (typeof window !== "undefined" && userCoords?.lat && userCoords?.long) {
-      mapRef.current = L.map("map").setView([userCoords.lat, userCoords.long], 19);
+    if (typeof window !== "undefined" && userCoords) {
+      mapRef.current = L.map("map").setView(
+        [userCoords.lat, userCoords.long],
+        16
+      );
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
       }).addTo(mapRef.current);
 
       markersLayerRef.current = L.layerGroup().addTo(mapRef.current);
+      console.log(userCoords);
+
+      // add user's coordinate marker on the map
+      // addOrUpdateMarker(userCoords, "You");
     }
   }, [userCoords]);
 
-  // Get user coordinates using Geolocation API
+  // fetch user coordinates
   useEffect(() => {
-    if (typeof navigator !== "undefined" && navigator.geolocation) {
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserCoords({
             lat: position.coords.latitude,
             long: position.coords.longitude,
           });
+          setStatus("Location fetched.");
         },
         (error) => {
           console.error("Error fetching coordinates: ", error);
+          setStatus("Error fetching location.");
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
   }, []);
 
-  // Handle socket connections
+  //sockets
   useEffect(() => {
     socket.on("connect", () => {
-      console.log("User is connected");
+      setStatus("Connected to server.");
     });
 
-    socket.on("coords", (data) => {
-      console.log("Received coords: ", data.coords);
-      addMarker(data.coords, data.id);
-    });
-
-    socket.on("live-users", (users) => {
-      console.log("Live users: ", users);
+    socket.on("wait-message", (message) => {
+      console.log(message);
     });
 
     return () => {
-      socket.off("coords"); // Remove listeners to prevent memory leaks
-      socket.off("live-users");
       socket.disconnect();
     };
   }, [socket]);
 
   useEffect(() => {
-    if (userCoords?.lat && userCoords?.long) {
-      socket.emit("user-coords", userCoords);
-    }
-  }, [userCoords, socket]);
+    socket.on("paired", (message) => {
+      console.log(message);
+      if (userCoords) {
+        socket.emit("user-coords", userCoords);
+        setStatus("Paired! Sharing location...");
+      }
+    });
 
-  const addMarker = (coords: Coords, id: string) => {
+    socket.on("user-coords", (data: { coords: Coords; user: string }) => {
+      console.log("Received coords from paired user:", data);
+      addOrUpdateMarker(data.coords, data.user);
+      setStatus("Location updated with paired user.");
+    });
+  }, [userCoords]);
+
+  const addOrUpdateMarker = (coords: Coords, id: string) => {
     if (markersLayerRef.current) {
-      const customIcon = L.icon({
-        iconUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLWRQ2MP28ucwL3bUexiJ8kfDjKM_IO6TCrw&s",
-        iconSize: [40, 40],
-        iconAnchor: [20, 40],
-        popupAnchor: [0, -40],
-      });
+      const existingMarker = markers.current.get(id);
 
-      const marker = L.marker([coords.lat, coords.long], {
-        icon: customIcon,
-      }).bindPopup(`User ${id}`);
-      markersLayerRef.current.addLayer(marker);
+      if (existingMarker) {
+        // Update existing marker position
+        existingMarker.setLatLng([coords.lat, coords.long]);
+      } else {
+        // Add a new marker
+        const customIcon = L.icon({
+          iconUrl:
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLWRQ2MP28ucwL3bUexiJ8kfDjKM_IO6TCrw&s",
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+          popupAnchor: [0, -40],
+        });
+
+        const marker = L.marker([coords.lat, coords.long], {
+          icon: customIcon,
+        }).bindPopup(id);
+
+        markers.current.set(id, marker); // Track the marker by ID
+        markersLayerRef.current.addLayer(marker);
+      }
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-6">
       <div className="w-full bg-white p-6 rounded-lg shadow-lg space-y-4">
-        <div>
-          <div id="map" className="h-[80vh] w-full"></div>
-        </div>
+        <p className="text-lg font-semibold">{status}</p>
+        <div id="map" className="h-[80vh] w-full"></div>
       </div>
     </div>
   );
