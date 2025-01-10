@@ -43,7 +43,7 @@ const Page = () => {
       console.log(userCoords);
 
       // add user's coordinate marker on the map
-      // addOrUpdateMarker(userCoords, "You");
+      addOrUpdateMarker(userCoords, "You");
     }
   }, [userCoords]);
 
