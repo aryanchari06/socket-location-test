@@ -36,11 +36,7 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 ## Running the app
-Run the backend in express
-1. move to the backend folder
-    cd backend
-2. open a split terminal and run the two commands in the terminals
-    npm run dev
-    npm run watch
-3. Run the frontend in a new terminal in parent directory
-    npm run dev
+Run the backend in express (ignore the lack of formatting please)
+1. move to the backend folder cd backend
+2. open a split terminal and run the two commands in the terminals npm run dev npm run watch
+3. Run the frontend in a new terminal in parent directory  npm run dev
