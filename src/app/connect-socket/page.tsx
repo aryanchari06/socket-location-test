@@ -26,7 +26,7 @@ const Page = () => {
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const markers = useRef<Map<string, L.Marker>>(new Map()); // Track markers by ID
-  const [count, setCount] = useState(0);
+  // const [count, setCount] = useState(0);
 
   // initializing map
   useEffect(() => {
@@ -100,7 +100,7 @@ const Page = () => {
       addOrUpdateMarker(data.coords, data.user);
       setStatus("Location updated with paired user.");
     });
-  }, [userCoords?.lat, userCoords?.long, count]);
+  }, [userCoords?.lat, userCoords?.long, userCoords]);
 
   const addOrUpdateMarker = (coords: Coords, id: string) => {
     if (markersLayerRef.current) {
