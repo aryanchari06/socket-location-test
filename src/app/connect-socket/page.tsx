@@ -30,7 +30,8 @@ const Page = () => {
 
   // initializing map
   useEffect(() => {
-    if (typeof window !== "undefined" && userCoords) {
+    if ( userCoords) {
+    // if (typeof window !== "undefined" && userCoords) {
       mapRef.current = L.map("map").setView(
         [userCoords.lat, userCoords.long],
         16
