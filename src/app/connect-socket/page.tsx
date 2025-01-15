@@ -1,7 +1,13 @@
 "use client";
 
 import { io, Socket } from "socket.io-client";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -14,7 +20,7 @@ let socket: Socket | null = null;
 
 const getSocket = () => {
   if (!socket) {
-    socket = io("http://localhost:8000");
+    socket = io(process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000");
   }
   return socket;
 };
@@ -25,13 +31,35 @@ const Page = () => {
   const socket = useMemo(() => getSocket(), []);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
-  const markers = useRef<Map<string, L.Marker>>(new Map()); // Track markers by ID
-  // const [count, setCount] = useState(0);
+  const markers = useRef<Map<string, L.Marker>>(new Map());
 
-  // initializing map
+  const addOrUpdateMarker = useCallback((coords: Coords, id: string) => {
+    if (markersLayerRef.current) {
+      const existingMarker = markers.current.get(id);
+
+      if (existingMarker) {
+        existingMarker.setLatLng([coords.lat, coords.long]);
+      } else {
+        const customIcon = L.icon({
+          iconUrl:
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLWRQ2MP28ucwL3bUexiJ8kfDjKM_IO6TCrw&s",
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+          popupAnchor: [0, -40],
+        });
+
+        const marker = L.marker([coords.lat, coords.long], {
+          icon: customIcon,
+        }).bindPopup(id);
+
+        markers.current.set(id, marker);
+        markersLayerRef.current.addLayer(marker);
+      }
+    }
+  }, []);
+
   useEffect(() => {
-    if ( userCoords) {
-    // if (typeof window !== "undefined" && userCoords) {
+    if (userCoords) {
       mapRef.current = L.map("map").setView(
         [userCoords.lat, userCoords.long],
         16
@@ -42,14 +70,14 @@ const Page = () => {
       }).addTo(mapRef.current);
 
       markersLayerRef.current = L.layerGroup().addTo(mapRef.current);
-      console.log(userCoords);
 
-      // add user's coordinate marker on the map
       addOrUpdateMarker(userCoords, "You");
     }
-  }, [userCoords]);
+  }, [userCoords, addOrUpdateMarker]);
 
-  // fetch user coordinates
+  useEffect(() => {
+    if (userCoords) console.log("Own coords: ", userCoords);
+  }, [userCoords]);
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -69,14 +97,14 @@ const Page = () => {
     }
   }, []);
 
-  //sockets
   useEffect(() => {
     socket.on("connect", () => {
       setStatus("Connected to server.");
     });
 
     socket.on("wait-message", (message) => {
-      console.log(message);
+      console.log(message.message);
+      setStatus(message.message);
     });
 
     return () => {
@@ -85,9 +113,6 @@ const Page = () => {
   }, [socket]);
 
   useEffect(() => {
-    // setInterval(() => {
-    //   setCount(count + 1);
-    // }, 1000);
     socket.on("paired", (message) => {
       console.log(message);
       if (userCoords) {
@@ -101,34 +126,12 @@ const Page = () => {
       addOrUpdateMarker(data.coords, data.user);
       setStatus("Location updated with paired user.");
     });
-  }, [userCoords?.lat, userCoords?.long, userCoords, socket]);
 
-  const addOrUpdateMarker = (coords: Coords, id: string) => {
-    if (markersLayerRef.current) {
-      const existingMarker = markers.current.get(id);
-
-      if (existingMarker) {
-        // Update existing marker position
-        existingMarker.setLatLng([coords.lat, coords.long]);
-      } else {
-        // Add a new marker
-        const customIcon = L.icon({
-          iconUrl:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLWRQ2MP28ucwL3bUexiJ8kfDjKM_IO6TCrw&s",
-          iconSize: [40, 40],
-          iconAnchor: [20, 40],
-          popupAnchor: [0, -40],
-        });
-
-        const marker = L.marker([coords.lat, coords.long], {
-          icon: customIcon,
-        }).bindPopup(id);
-
-        markers.current.set(id, marker); // Track the marker by ID
-        markersLayerRef.current.addLayer(marker);
-      }
-    }
-  };
+    return () => {
+      socket.off("paired");
+      socket.off("user-coords");
+    };
+  }, [userCoords, socket, addOrUpdateMarker]);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-6">
