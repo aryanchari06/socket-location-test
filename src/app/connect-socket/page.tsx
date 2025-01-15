@@ -12,7 +12,7 @@ interface Coords {
 
 let socket: Socket | null = null;
 
-export const getSocket = () => {
+const getSocket = () => {
   if (!socket) {
     socket = io("http://localhost:8000");
   }
@@ -100,7 +100,7 @@ const Page = () => {
       addOrUpdateMarker(data.coords, data.user);
       setStatus("Location updated with paired user.");
     });
-  }, [userCoords?.lat, userCoords?.long, userCoords]);
+  }, [userCoords?.lat, userCoords?.long, userCoords, socket]);
 
   const addOrUpdateMarker = (coords: Coords, id: string) => {
     if (markersLayerRef.current) {
