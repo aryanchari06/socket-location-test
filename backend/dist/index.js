@@ -26,6 +26,14 @@ io.on("connection", (socket) => {
         pairedUser.emit("paired", { message: `Paired with ${socket.id}` });
         console.log(`Paired users ${socket.id} <-> ${pairedUser.id}`);
         // share coords between users
+        pairedUser.on("user-coords", (coords) => {
+            var _a;
+            console.log(`Sending coordinates from ${pairedUser.id}:`, coords);
+            (_a = pairedUser.pairedUser) === null || _a === void 0 ? void 0 : _a.emit("user-coords", {
+                coords,
+                user: pairedUser.id,
+            });
+        });
         socket.on("user-coords", (coords) => {
             var _a;
             console.log(`Sending coordinates from ${socket.id}:`, coords);
@@ -34,14 +42,6 @@ io.on("connection", (socket) => {
             coords.long = coords.long + Math.random() * 0.0006;
             console.log("mew coords:", coords);
             (_a = socket.pairedUser) === null || _a === void 0 ? void 0 : _a.emit("user-coords", { coords, user: socket.id });
-        });
-        pairedUser.on("user-coords", (coords) => {
-            var _a;
-            console.log(`Sending coordinates from ${pairedUser.id}:`, coords);
-            (_a = pairedUser.pairedUser) === null || _a === void 0 ? void 0 : _a.emit("user-coords", {
-                coords,
-                user: pairedUser.id,
-            });
         });
     }
     else {

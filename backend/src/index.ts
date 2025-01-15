@@ -41,6 +41,15 @@ io.on("connection", (socket: Socket) => {
     console.log(`Paired users ${socket.id} <-> ${pairedUser.id}`);
 
     // share coords between users
+
+    pairedUser.on("user-coords", (coords) => {
+      console.log(`Sending coordinates from ${pairedUser.id}:`, coords);
+      pairedUser.pairedUser?.emit("user-coords", {
+        coords,
+        user: pairedUser.id,
+      });
+    });
+
     socket.on("user-coords", (coords) => {
       console.log(`Sending coordinates from ${socket.id}:`, coords);
       // added Math.random() to differentiate between the two coords
@@ -50,13 +59,6 @@ io.on("connection", (socket: Socket) => {
       socket.pairedUser?.emit("user-coords", { coords, user: socket.id });
     });
 
-    pairedUser.on("user-coords", (coords) => {
-      console.log(`Sending coordinates from ${pairedUser.id}:`, coords);
-      pairedUser.pairedUser?.emit("user-coords", {
-        coords,
-        user: pairedUser.id,
-      });
-    });
   } else {
     waitingUser = socket;
     socket.emit("wait-message", { message: "Waiting for user to join..." });

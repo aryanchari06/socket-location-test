@@ -26,6 +26,7 @@ const Page = () => {
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const markers = useRef<Map<string, L.Marker>>(new Map()); // Track markers by ID
+  const [count, setCount] = useState(0);
 
   // initializing map
   useEffect(() => {
@@ -83,6 +84,9 @@ const Page = () => {
   }, [socket]);
 
   useEffect(() => {
+    // setInterval(() => {
+    //   setCount(count + 1);
+    // }, 1000);
     socket.on("paired", (message) => {
       console.log(message);
       if (userCoords) {
@@ -96,7 +100,7 @@ const Page = () => {
       addOrUpdateMarker(data.coords, data.user);
       setStatus("Location updated with paired user.");
     });
-  }, [userCoords]);
+  }, [userCoords?.lat, userCoords?.long, count]);
 
   const addOrUpdateMarker = (coords: Coords, id: string) => {
     if (markersLayerRef.current) {
