@@ -78,9 +78,10 @@ const Page = () => {
   useEffect(() => {
     if (userCoords) console.log("Own coords: ", userCoords);
   }, [userCoords]);
+
   useEffect(() => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+      navigator.geolocation.watchPosition(
         (position) => {
           setUserCoords({
             lat: position.coords.latitude,
