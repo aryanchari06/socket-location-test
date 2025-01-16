@@ -1,8 +1,14 @@
 "use client";
 
 import { io, Socket } from "socket.io-client";
-import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import dynamic from "next/dynamic";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 interface Coords {
@@ -23,9 +29,9 @@ const Page = () => {
   const [userCoords, setUserCoords] = useState<Coords | null>(null);
   const [status, setStatus] = useState<string>("Initializing...");
   const socket = useMemo(() => getSocket(), []);
-  const mapRef = useRef<any>(null);
-  const markersLayerRef = useRef<any>(null);
-  const markers = useRef<Map<string, any>>(new Map());
+  const mapRef = useRef<L.Map | null>(null);
+  const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const markers = useRef<Map<string, L.Marker>>(new Map());
 
   const addOrUpdateMarker = useCallback((coords: Coords, id: string) => {
     if (markersLayerRef.current) {
@@ -34,7 +40,6 @@ const Page = () => {
       if (existingMarker) {
         existingMarker.setLatLng([coords.lat, coords.long]);
       } else {
-        const L = require("leaflet");
         const customIcon = L.icon({
           iconUrl:
             "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLWRQ2MP28ucwL3bUexiJ8kfDjKM_IO6TCrw&s",
@@ -54,8 +59,7 @@ const Page = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && userCoords) {
-      const L = require("leaflet");
+    if (userCoords) {
       mapRef.current = L.map("map").setView(
         [userCoords.lat, userCoords.long],
         16
@@ -70,6 +74,10 @@ const Page = () => {
       addOrUpdateMarker(userCoords, "You");
     }
   }, [userCoords, addOrUpdateMarker]);
+
+  useEffect(() => {
+    if (userCoords) console.log("Own coords: ", userCoords);
+  }, [userCoords]);
 
   useEffect(() => {
     if (navigator.geolocation) {
